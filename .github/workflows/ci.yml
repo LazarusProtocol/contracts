@@ -90,7 +90,7 @@ jobs:
             ### Lazarus Vault Soroban Smart Contract (`wasm32v1-none`)
             - **Binary:** `lazarus_vault.wasm` (${{ steps.wasm_meta.outputs.size_bytes }} bytes)
             - **SHA-256 / WASM Hash:** `${{ steps.wasm_meta.outputs.sha256 }}`
-            - **Testnet Contract ID:** `CCWAH7BVPGYOEBPRFWPZIONBYUCCQH7OARGZLOD6ZV66SOAFBVA2DHD5`
+            - **Testnet Contract ID:** `CBKFA2F7RUDGLJNE3K5X2XEXVXRJQ5AMB2NSPREDTATE2ZHDALFKPGUR`
           files: |
             target/wasm32v1-none/release/lazarus_vault.wasm
             target/wasm32v1-none/release/lazarus_vault.wasm.sha256
