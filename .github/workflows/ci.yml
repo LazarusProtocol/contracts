@@ -1,0 +1,85 @@
+name: Soroban Smart Contracts CI & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  lint-test-and-wasm:
+    name: Rust Fmt, Clippy, Unit Tests & WASM Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain & wasm32v1-none target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy lints
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run Soroban contract unit tests
+        run: cargo test --workspace -- --nocapture
+
+      - name: Build optimized Soroban release WASM
+        run: cargo build --target wasm32v1-none --release
+
+      - name: Verify compiled WASM binary size & generate SHA-256 checksum
+        id: wasm_meta
+        run: |
+          WASM_PATH="target/wasm32v1-none/release/lazarus_vault.wasm"
+          ls -lh "$WASM_PATH"
+          size_bytes=$(wc -c < "$WASM_PATH" | tr -d ' ')
+          sha256_hash=$(sha256sum "$WASM_PATH" | awk '{print $1}')
+          echo "${sha256_hash}  lazarus_vault.wasm" > target/wasm32v1-none/release/lazarus_vault.wasm.sha256
+          echo "size_bytes=${size_bytes}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${sha256_hash}" >> "$GITHUB_OUTPUT"
+          echo "Compiled lazarus_vault.wasm size: ${size_bytes} bytes (SHA-256: ${sha256_hash})"
+          if [ "$size_bytes" -gt 65536 ]; then
+            echo "Error: WASM binary exceeds 64 KB Soroban ledger limit"
+            exit 1
+          fi
+
+      - name: Upload compiled WASM build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lazarus-vault-wasm
+          path: |
+            target/wasm32v1-none/release/lazarus_vault.wasm
+            target/wasm32v1-none/release/lazarus_vault.wasm.sha256
+
+      - name: Publish GitHub Release with compiled WASM
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.1.0' }}
+          name: "Lazarus Vault Soroban Contract ${{ github.ref_type == 'tag' && github.ref_name || 'v0.1.0' }}"
+          generate_release_notes: true
+          body: |
+            ### Lazarus Vault Soroban Smart Contract (`wasm32v1-none`)
+            - **Binary:** `lazarus_vault.wasm` (${{ steps.wasm_meta.outputs.size_bytes }} bytes)
+            - **SHA-256 / WASM Hash:** `${{ steps.wasm_meta.outputs.sha256 }}`
+            - **Testnet Contract ID:** `CCWAH7BVPGYOEBPRFWPZIONBYUCCQH7OARGZLOD6ZV66SOAFBVA2DHD5`
+          files: |
+            target/wasm32v1-none/release/lazarus_vault.wasm
+            target/wasm32v1-none/release/lazarus_vault.wasm.sha256
