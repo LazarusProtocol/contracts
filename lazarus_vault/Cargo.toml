@@ -3,8 +3,12 @@ name = "lazarus_vault"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
+repository = "https://github.com/LazarusProtocol/contracts"
 publish = false
 description = "LazarusProtocol Decentralized State-Rent & State-Warming Escrow Vault"
+
+[package.metadata.stellar]
+cargo_inherit = true
 
 [lib]
 crate-type = ["lib", "cdylib"]

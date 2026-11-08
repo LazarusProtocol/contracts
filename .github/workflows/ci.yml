@@ -13,6 +13,8 @@ env:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 jobs:
   lint-test-and-wasm:
@@ -29,6 +31,9 @@ jobs:
           targets: wasm32v1-none
           components: rustfmt, clippy
 
+      - name: Install Stellar CLI
+        uses: stellar/stellar-cli@v25.1.0
+
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@v2
 
@@ -41,8 +46,14 @@ jobs:
       - name: Run Soroban contract unit tests
         run: cargo test --workspace -- --nocapture
 
-      - name: Build optimized Soroban release WASM
-        run: cargo build --target wasm32v1-none --release
+      - name: Build optimized Soroban release WASM with SEP-55 source_repo metadata
+        run: stellar contract build
+
+      - name: Generate SEP-55 GitHub Build Provenance Attestation
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: target/wasm32v1-none/release/lazarus_vault.wasm
 
       - name: Verify compiled WASM binary size & generate SHA-256 checksum
         id: wasm_meta

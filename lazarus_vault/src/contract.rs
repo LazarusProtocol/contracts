@@ -435,6 +435,22 @@ impl LazarusVault {
         Ok(())
     }
 
+    /// Admin-authenticated in-place WASM upgrade (`update_current_contract_wasm`)
+    pub fn upgrade(e: Env, admin: Address, new_wasm_hash: BytesN<32>) -> Result<(), VaultError> {
+        admin.require_auth();
+        let stored_admin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(VaultError::NotInitialized)?;
+        if admin != stored_admin {
+            return Err(VaultError::Unauthorized);
+        }
+        e.storage().instance().extend_ttl(BUMP_THRESHOLD, BUMP_TO);
+        e.deployer().update_current_contract_wasm(new_wasm_hash);
+        Ok(())
+    }
+
     /// Read-only query: Fetches VaultConfig for an enrolled target contract
     pub fn get_registration(e: Env, target: Address) -> Result<VaultConfig, VaultError> {
         e.storage()
