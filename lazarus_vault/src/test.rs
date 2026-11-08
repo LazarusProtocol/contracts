@@ -46,10 +46,12 @@ impl<'a> TestContext<'a> {
         // Mint 100,000,000 stroops to client_user
         sac_admin_client.mint(&client_user, &100_000_000i128);
 
-        // Register and initialize LazarusVault
-        let vault_address = env.register(LazarusVault, ());
+        // Register and atomically initialize LazarusVault via CAP-0058 __constructor
+        let vault_address = env.register(
+            LazarusVault,
+            (&admin, &oracle_pubkey, &token_address, &max_hourly_outflow),
+        );
         let vault_client = LazarusVaultClient::new(&env, &vault_address);
-        vault_client.initialize(&admin, &oracle_pubkey, &token_address, &max_hourly_outflow);
 
         Self {
             env,

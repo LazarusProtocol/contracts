@@ -6,7 +6,20 @@ pub struct LazarusVault;
 
 #[contractimpl]
 impl LazarusVault {
-    /// Initializes administrative keys, oracle public key, and payment token
+    /// Atomic CAP-0058 constructor executed inside `CreateContractWithCtorHostFunction`.
+    /// Eliminates any multi-transaction deployment initialization window.
+    pub fn __constructor(
+        e: Env,
+        admin: Address,
+        oracle_pubkey: BytesN<32>,
+        token: Address,
+        max_hourly_outflow: i128,
+    ) -> Result<(), VaultError> {
+        Self::initialize(e, admin, oracle_pubkey, token, max_hourly_outflow)
+    }
+
+    /// Initializes administrative keys, oracle public key, and payment token.
+    /// Requires `admin.require_auth()` and rejects re-initialization (`AlreadyInitialized`).
     pub fn initialize(
         e: Env,
         admin: Address,
@@ -17,6 +30,7 @@ impl LazarusVault {
         if e.storage().instance().has(&DataKey::Admin) {
             return Err(VaultError::AlreadyInitialized);
         }
+        admin.require_auth();
         if token == e.current_contract_address() {
             return Err(VaultError::InvalidTarget);
         }
