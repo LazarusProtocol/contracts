@@ -1,0 +1,16 @@
+# Rust / Cargo build artifacts
+/target
+**/*.rs.bk
+
+# Stellar / Soroban CLI local state
+.stellar/
+
+# Environment variables (keep .env.example tracked)
+.env
+.env.local
+!.env.example
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
